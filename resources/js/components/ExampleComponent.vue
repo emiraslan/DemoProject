@@ -4,7 +4,7 @@
             <v-card-title class="px-0 pb-3">
                 Registration
             </v-card-title>
-            <v-form fast-fail @submit.prevent>
+            <v-form fast-fail @submit.prevent="register">
                 <v-text-field
                     v-model="fullName"
                     label="Full name"
@@ -52,6 +52,13 @@
 
                 <v-btn type="submit" block class="mt-2 bg-blue">Register</v-btn>
             </v-form>
+            <p
+                v-if="message"
+                class="mt-3 text-subtitle-1 message"
+                :class="[hasError ? 'text-red' : 'text-green']"
+            >
+                {{ message }}
+            </p>
         </v-card>
     </div>
 </template>
@@ -61,27 +68,27 @@ import countries from '../data/countries.json'
 
 export default {
     data: () => ({
+        message: '',
+        hasError: false,
         countries,
         selectedCountry: {
             name:"Eswatini",
             flag:"\ud83c\uddf8\ud83c\uddff",
             idd:"+268"
         },
-        country: 'Eswatini',
+        country: '',
         fullName: '',
         fullNameRules: [
             value => {
-                if (value?.length > 2) return true
+                if (value?.length > 1) return true
                 return 'Full name must be at least 2 characters.'
             },
         ],
-
         phoneNumber: '',
-
         email: '',
         emailRules: [
             value => {
-                if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(value)) return true
+                if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w+)+$/.test(value)) return true
                 return 'Email is not properly formatted'
             }
         ],
@@ -92,13 +99,37 @@ export default {
       }
     },
     methods: {
+        async register() {
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        fullname: this.fullName,
+                        email: this.email,
+                        phoneNumber: this.phoneNumber,
+                        country: this.country
+                    }),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                const data = await res.json()
+
+                this.hasError = !!(data.errors)
+                this.message = data.message
+
+                if (!this.hasError) {
+                    this.emptyFields()
+                }
+            } catch (e) {
+                console.error(e.message);
+            }
+        },
         formatPhoneNumber(event) {
-            const format = '00 000-00-00'
             let res = ''
             let value = event.target.value;
             value = value.replace(/[^0-9]+/g, '')
-
-            console.log('Replaced: ', value)
 
             for (let i = 0; i < value.length && i < 9; i ++) {
                 if (i === 2) {
@@ -126,5 +157,9 @@ export default {
 <style>
 .v-text-field__prefix {
     color: #2196f3 !important;
+}
+
+p.message {
+    font-size: 12px !important;
 }
 </style>
